@@ -73,7 +73,7 @@ def accept(server):
         logger.info(
             f'Connection established: {client.getsockname()} -> ? -> {conn.getpeername()}')
 
-        extra_data = {'websocket_handshake': False}
+        extra_data = {'websocket_handshake': False if fake_websocket_reply else True}
 
         sel.register(client, selectors.EVENT_READ,
                      data=(forward_ws, client, conn, extra_data))
