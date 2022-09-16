@@ -22,30 +22,43 @@ logging.basicConfig(level=logging.DEBUG, format=fmt)
 logger = logging.getLogger(__file__)
 
 
-def websocket_upgrade(client):
+def websocket_upgrade(client, extra_data):
     """return a fake websocket reply"""
-    client.sendall(
-        "HTTP/1.1 101 Switching Protocols (Python)\r\nContent-Length: 1048576000000\r\n\r\n".encode('utf-8'))
+    buffer = client.recv(BUFFER_SIZE)
+    if buffer:
+        client.sendall(
+            "HTTP/1.1 101 Switching Protocols (Python)\r\nContent-Length: 1048576000000\r\n\r\n".encode('utf-8'))
+        logger.info('Websocket upgraded!')
 
 
-def forward(src, dst):
-    try:
-        buffer = src.recv(BUFFER_SIZE)
-        if buffer:
-            dst.sendall(buffer)
-        else:
-            sel.unregister(src)
-            sel.unregister(dst)
+def forward_ws(client, conn, extra_data):
+    # Upgrading to Websocket.
+    if not extra_data['websocket_handshake']:
+        extra_data['websocket_handshake'] = True
+        return websocket_upgrade(client, extra_data)
 
-            src.shutdown(socket.SHUT_RDWR)
-            dst.shutdown(socket.SHUT_RDWR)
+    forward(client, conn, extra_data)
 
-            src.close()
-            dst.close()
-            logger.info('Connection closed.')
-    except OSError as e:
-        logger.warning('Socket already closed!')
-        logger.warning(e)
+
+def forward(src, dst, extra_data):
+    if extra_data['websocket_handshake']:
+        try:
+            buffer = src.recv(BUFFER_SIZE)
+            if buffer:
+                dst.sendall(buffer)
+            else:
+                sel.unregister(src)
+                sel.unregister(dst)
+
+                src.shutdown(socket.SHUT_RDWR)
+                dst.shutdown(socket.SHUT_RDWR)
+
+                src.close()
+                dst.close()
+                logger.info('Connection closed.')
+        except OSError as e:
+            logger.warning('Socket already closed!')
+            logger.warning(e)
 
 
 def accept(server):
@@ -60,17 +73,12 @@ def accept(server):
         logger.info(
             f'Connection established: {client.getsockname()} -> ? -> {conn.getpeername()}')
 
-        # Upgrading to Websocket.
-        websocket_handshake = False
-        if fake_websocket_reply and not websocket_handshake:
-            websocket_upgrade(client)
-            websocket_handshake = True
-            logger.info('Websocket upgraded!')
+        extra_data = {'websocket_handshake': False}
 
         sel.register(client, selectors.EVENT_READ,
-                     data=(forward, client, conn))
+                     data=(forward_ws, client, conn, extra_data))
         sel.register(conn, selectors.EVENT_READ,
-                     data=(forward, conn, client))
+                     data=(forward, conn, client, extra_data))
 
     except ConnectionRefusedError:
         logger.error('Destination connection refused.')
