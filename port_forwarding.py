@@ -11,6 +11,7 @@ lport = 9090            # Default server port.
 dhost = '127.0.0.1'     # Default destination host.
 dport = 22              # Default destination port.
 BUFFER_SIZE = 4096      # Default buffer size.
+fake_websocket_reply = False
 
 sel = selectors.DefaultSelector()
 
@@ -18,6 +19,12 @@ sel = selectors.DefaultSelector()
 fmt = "%(asctime)s - [%(levelname)s]: %(message)s"
 logging.basicConfig(level=logging.DEBUG, format=fmt)
 logger = logging.getLogger(__file__)
+
+
+def websocket_upgrade(client):
+    """return a fake websocket reply"""
+    client.sendall(
+        "HTTP/1.1 101 Switching Protocols (Python)\r\nContent-Length: 1048576000000\r\n\r\n".encode('utf-8'))
 
 
 def forward(src, dst):
@@ -52,6 +59,13 @@ def accept(server):
         logger.info(
             f'Connection established: {client.getsockname()} -> ? -> {conn.getpeername()}')
 
+        # Upgrading to Websocket.
+        websocket_handshake = False
+        if fake_websocket_reply and not websocket_handshake:
+            websocket_upgrade(client)
+            websocket_handshake = True
+            logger.info('Websocket upgraded!')
+
         sel.register(client, selectors.EVENT_READ,
                      data=(forward, client, conn))
         sel.register(conn, selectors.EVENT_READ,
@@ -73,8 +87,7 @@ def server(lhost, lport, dhost, dport):
 
         try:
             while True:
-                events = sel.select()
-                for key, flag in events:
+                for key, flag in sel.select():
                     callback, *args = key.data
                     callback(*args)
         except KeyboardInterrupt:
@@ -87,11 +100,13 @@ if __name__ == '__main__':
         description="A Simple and Great Port forwarding script :D",
         usage=f"%(prog)s --server {lport} --target {dhost}:{dport}"
     )
-    parser.add_argument(
-        '--server', metavar='', required=True, help='A port, for a server to liston on.', default=f'{lhost}:{lport}')
+    parser.add_argument('--server', metavar='', required=True,
+                        help='A port, for a server to liston on.', default=f'{lhost}:{lport}')
 
     parser.add_argument('--target', metavar='', required=True,
                         help='Distination, e.g: 127.0.0.1:20 or 10.0.0.5:3306')
+    parser.add_argument('--fake-ws-reply', action='store_true',
+                        help='return "HTTP/1.1 101 Switching Protocol" for a fake Websocket upgrade reply\n (useful for HTTP Custom & HTTP Injector)!')
 
     args = parser.parse_args()
 
@@ -107,6 +122,8 @@ if __name__ == '__main__':
         host, port = args.target.split(':')
         dhost = host if host else dhost
         dport = int(port) if port else dport
+
+    fake_websocket_reply = args.fake_ws_reply
 
     logger.info(f"tunnel: {lhost}:{lport} --> {dhost}:{dport}")
     # start a server.
