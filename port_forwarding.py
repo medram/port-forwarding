@@ -6,13 +6,13 @@ import threading
 import logging
 
 
-lhost = '0.0.0.0'		# Default server host (to bind)
-lport = 9090 			# Default server port.
-dhost = '127.0.0.1' 	# Default destination host.
-dport = 22 				# Default destination port.
-BUFFER_SIZE = 4096 		# Default buffer size.
+lhost = '0.0.0.0'       # Default server host (to bind)
+lport = 9090            # Default server port.
+dhost = '127.0.0.1'     # Default destination host.
+dport = 22              # Default destination port.
+BUFFER_SIZE = 4096      # Default buffer size.
 
-threads_list = set()  	# Save all theads
+threads_list = set()    # Save all theads
 
 # Setting up the logger
 fmt = "%(asctime)s - [%(levelname)s]: %(message)s"
@@ -83,7 +83,9 @@ def server(lhost, lport, dhost, dport):
 if __name__ == '__main__':
     # Get arguments from terminal.
     parser = argparse.ArgumentParser(
-        description="A Simple and Great Port forwarding script :D")
+        description="A Simple and Great Port forwarding script :D",
+        usage=f"%(prog)s --server {lport} --target {dhost}:{dport}"
+    )
     parser.add_argument(
         '--server', metavar='', required=True, help='A port, for a server to liston on.', default=f'{lhost}:{lport}')
 
