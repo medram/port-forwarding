@@ -4,6 +4,7 @@ import socket
 import argparse
 import logging
 import selectors
+import traceback
 
 
 lhost = '0.0.0.0'       # Default server host (to bind)
@@ -71,8 +72,10 @@ def accept(server):
         sel.register(conn, selectors.EVENT_READ,
                      data=(forward, conn, client))
 
-    except Exception as e:
-        logger.error(e)
+    except ConnectionRefusedError:
+        logger.error('Destination connection refused.')
+    except Exception:
+        logger.error(traceback.format_exc())
 
 
 def server(lhost, lport, dhost, dport):
