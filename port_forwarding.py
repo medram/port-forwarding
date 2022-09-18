@@ -118,6 +118,8 @@ if __name__ == '__main__':
         host, port = args.target.split(':')
         dhost = host if host else dhost
         dport = int(port) if port else dport
+    else:
+        dport = int(args.target)
 
     fake_websocket_reply = args.fake_ws_reply
 
