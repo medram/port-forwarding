@@ -5,6 +5,7 @@ import argparse
 import logging
 import traceback
 import asyncio
+import selectors
 
 
 lhost = '0.0.0.0'       # Default server host (to bind)
@@ -18,6 +19,11 @@ fake_websocket_reply = False
 fmt = "%(asctime)s - [%(levelname)s]: %(message)s"
 logging.basicConfig(level=logging.DEBUG, format=fmt)
 logger = logging.getLogger(__file__)
+
+# Change the default event loop!
+selector = selectors.SelectSelector()
+loop = asyncio.SelectorEventLoop(selector)
+asyncio.set_event_loop(loop)
 
 
 async def websocket_upgrade(client):
