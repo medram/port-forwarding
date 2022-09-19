@@ -83,17 +83,18 @@ async def server(lhost, lport, dhost, dport):
         server.listen()
 
         logger.info(f'Server started on {lhost}:{lport}')
-        try:
-            while True:
-                await accept(server)
+        while True:
+            try:
+                while True:
+                    await accept(server)
 
-        except ConnectionRefusedError:
-            logger.error('Destination connection refused.')
-        except OSError:
-            logger.error('socket.connect() error!')
-            logger.error(traceback.format_exc())
-        except Exception:
-            logger.error(traceback.format_exc())
+            except ConnectionRefusedError:
+                logger.error('Destination connection refused.')
+            except OSError:
+                logger.error('socket.connect() error!')
+                logger.error(traceback.format_exc())
+            except Exception:
+                logger.error(traceback.format_exc())
 
 
 if __name__ == '__main__':
