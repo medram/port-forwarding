@@ -83,10 +83,10 @@ async def server(lhost, lport, dhost, dport):
         server.listen()
 
         logger.info(f'Server started on {lhost}:{lport}')
+
         while True:
             try:
-                while True:
-                    await accept(server)
+                await accept(server)
 
             except ConnectionRefusedError:
                 logger.error('Destination connection refused.')
